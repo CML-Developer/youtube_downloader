@@ -8,7 +8,7 @@ app = Flask(__name__)
 CORS(app)
 
 # Ruta para descargar video (la original)
-@app.route('/download_video', methods=['GET'])
+@app.route('/download_audio', methods=['GET'])
 def download_video():
     video_url = request.args.get('url')
     if not video_url:

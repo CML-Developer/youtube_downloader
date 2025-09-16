@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Descargador de Videos de YouTube</title>
+    <title>Descargador de Videos y Audio de YouTube</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -24,18 +24,14 @@
             100% { transform: rotate(360deg); }
         }
     </style>
-    <!-- Chosen Palette: Warm Neutrals & Deep Blue -->
-    <!-- Application Structure Plan: Se utiliza una estructura de utilidad de vista única. Una tarjeta central contiene el formulario de entrada (campo de URL y botón de envío). Al enviar, se muestra un estado de carga. Los resultados (miniatura, título, enlaces de descarga) aparecen dinámicamente debajo del formulario. Este es el flujo de usuario más directo para una herramienta de una sola tarea, minimizando los clics y la carga cognitiva. -->
-    <!-- Visualization & Content Choices: El componente principal es un formulario HTML. La interacción es impulsada por un evento de clic de botón. JavaScript obtiene datos de una API de terceros para procesar el enlace de YouTube. La generación dinámica de contenido en JS crea una lista de enlaces de descarga con diferentes calidades. Esta es una elección funcional para una utilidad, no una visualización de datos. No se necesitan gráficos. -->
-    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
 </head>
 <body class="bg-gray-100 text-gray-800 flex items-center justify-center min-h-screen p-4">
 
     <div class="w-full max-w-2xl mx-auto">
         <div class="bg-white rounded-2xl shadow-lg p-6 md:p-10">
             <div class="text-center mb-8">
-                <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Descargador de Videos</h1>
-                <p class="text-gray-500 mt-2">Pega un enlace de YouTube para descargar el video en formato MP4.</p>
+                <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Descargador de YouTube</h1>
+                <p class="text-gray-500 mt-2">Pega un enlace de YouTube para descargar el video o solo el audio.</p>
             </div>
 
             <form id="downloadForm" class="space-y-4">
@@ -43,6 +39,18 @@
                     <svg class="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"></path></svg>
                     <input type="text" id="videoUrl" placeholder="https://www.youtube.com/watch?v=..." class="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200" required>
                 </div>
+                
+                <div class="flex items-center justify-center space-x-6">
+                    <div class="flex items-center">
+                        <input id="downloadTypeVideo" type="radio" name="downloadType" value="video" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300" checked>
+                        <label for="downloadTypeVideo" class="ml-2 block text-sm font-medium text-gray-700">Video (MP4)</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input id="downloadTypeAudio" type="radio" name="downloadType" value="audio" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300">
+                        <label for="downloadTypeAudio" class="ml-2 block text-sm font-medium text-gray-700">Audio (MP3)</label>
+                    </div>
+                </div>
+
                 <button type="submit" id="submitButton" class="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition duration-300 ease-in-out flex items-center justify-center space-x-2">
                     <span>Descargar</span>
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
@@ -63,7 +71,7 @@
             Este servicio utiliza un servidor local para funcionar.
         </p>
     </div>
-
+    
     <script>
         const downloadForm = document.getElementById('downloadForm');
         const videoUrlInput = document.getElementById('videoUrl');
@@ -75,6 +83,7 @@
         downloadForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const videoUrl = videoUrlInput.value.trim();
+            const downloadType = document.querySelector('input[name="downloadType"]:checked').value;
 
             if (!videoUrl) {
                 showError('Por favor, introduce una URL de YouTube.');
@@ -87,8 +96,9 @@
             submitButton.classList.add('opacity-50', 'cursor-not-allowed');
 
             try {
-                // Realiza la solicitud al servidor de Python
-                const response = await fetch(`http://localhost:5000/download?url=${encodeURIComponent(videoUrl)}`);
+                // Selecciona la ruta de la API según la elección del usuario
+                const apiUrl = downloadType === 'video' ? 'http://localhost:5000/download_video' : 'http://localhost:5000/download_audio';
+                const response = await fetch(`${apiUrl}?url=${encodeURIComponent(videoUrl)}`);
 
                 if (!response.ok) {
                     const errorData = await response.json();
@@ -124,12 +134,13 @@
         }
 
         function displayResults(data) {
-            const videoTitle = data.title || 'Video listo para descargar';
-
+            const videoTitle = data.title || 'Archivo listo para descargar';
+            const fileType = data.download_url.endsWith('.mp4') ? 'Video' : 'Audio';
+            
             const html = `
                 <div class="bg-gray-50 p-4 rounded-lg border text-center">
                     <h2 class="text-lg font-semibold mb-4">${videoTitle}</h2>
-                    <p class="text-gray-600 mb-4">¡Descarga completada! El video ha sido guardado en la misma carpeta que tu script de Python.</p>
+                    <p class="text-gray-600 mb-4">¡Descarga de ${fileType} completada! El archivo ha sido guardado en la carpeta de tu servidor.</p>
                 </div>
             `;
             resultsContainer.innerHTML = html;
